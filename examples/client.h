@@ -179,6 +179,7 @@ public:
   ngtcp2_conn *conn() const;
   int send_packet();
   int start_interactive_input();
+  int create_new_stream();
   int send_interactive_input();
   int stop_interactive_input();
   int remove_tx_stream_data(uint64_t stream_id, uint64_t offset,

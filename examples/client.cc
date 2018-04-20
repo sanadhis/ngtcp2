@@ -1295,6 +1295,32 @@ int Client::start_interactive_input() {
   return 0;
 }
 
+int Client::create_new_stream(){
+  int rv;
+
+  uint64_t stream_id;
+
+  rv = ngtcp2_conn_open_bidi_stream(conn_, &stream_id, nullptr);
+  if (rv != 0) {
+    std::cerr << "ngtcp2_conn_open_bidi_stream: " << ngtcp2_strerror(rv)
+              << std::endl;
+    if (rv == NGTCP2_ERR_STREAM_ID_BLOCKED) {
+      return 0;
+    }
+    return -1;
+  }
+
+  std::cerr << "The stream " << stream_id << " has opened." << std::endl;
+
+  last_stream_id_ = stream_id;
+
+  auto stream = std::make_unique<Stream>(stream_id);
+
+  streams_.emplace(stream_id, std::move(stream));
+
+  return 0;  
+}
+
 int Client::send_interactive_input() {
   ssize_t nread;
   std::array<uint8_t, 1_k> buf;
@@ -1309,14 +1335,43 @@ int Client::send_interactive_input() {
     return stop_interactive_input();
   }
 
+  int n=0;
+  std::string myString = "GET /index.html\n";
+  int size = myString.size();
+  std::cout << (const unsigned char *)myString.c_str() << std::endl;
+  while(n<100){
+    // TODO fix this
+    assert(!streams_.empty());
+
+    auto &stream = streams_[last_stream_id_];
+    stream->streambuf.emplace_back((const unsigned char *)myString.c_str(), size);
+    if (create_new_stream() == 0){
+      std::cout << "***Create_new_stream_success" << std::endl;
+    }
+    ev_feed_event(loop_, &wev_, EV_WRITE);
+    n++;
+  }
+  
+  std::cout << buf.data() << std::endl;
+  std::cout << nread << std::endl;
+
   // TODO fix this
   assert(!streams_.empty());
 
   auto &stream = streams_[last_stream_id_];
 
-  stream->streambuf.emplace_back(buf.data(), nread);
+  // stream->streambuf.emplace_back(buf.data(), nread);
 
-  ev_feed_event(loop_, &wev_, EV_WRITE);
+  // ev_feed_event(loop_, &wev_, EV_WRITE);
+
+  // stream->streambuf.emplace_back(buf.data(), nread);
+  // ev_feed_event(loop_, &wev_, EV_WRITE);
+
+  // stream->streambuf.emplace_back(buf.data(), nread);
+  // ev_feed_event(loop_, &wev_, EV_WRITE);
+
+  // stream->streambuf.emplace_back(buf.data(), nread);
+  // ev_feed_event(loop_, &wev_, EV_WRITE);
 
   return 0;
 }
