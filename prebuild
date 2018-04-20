@@ -1,0 +1,13 @@
+#!/bin/bash
+# For OSX
+
+pushd ../openssl
+./config enable-tls1_3 --prefix=$PWD/build
+make -j$(sysctl -n hw.physicalcpu)
+make install_sw
+popd
+autoreconf -i
+./configure PKG_CONFIG_PATH=$PWD/../openssl/build/lib/pkgconfig LDFLAGS="-Wl,-rpath,$PWD/../openssl/build/lib"
+make -j$(sysctl -n hw.physicalcpu) check
+rm cert/*
+./ci/gen-certificate.sh
