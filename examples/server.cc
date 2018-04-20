@@ -244,6 +244,7 @@ Stream::~Stream() {
 }
 
 int Stream::recv_data(uint8_t fin, const uint8_t *data, size_t datalen) {
+  std::cout << "***Stream:recv_data: " << data << std::endl;
   auto nread = http_parser_execute(
       &htp, &htp_settings, reinterpret_cast<const char *>(data), datalen);
   if (nread != datalen) {
@@ -1268,9 +1269,11 @@ int Handler::on_read(uint8_t *data, size_t datalen) {
   return 0;
 }
 
+int counter = 0;
 int Handler::on_write(bool retransmit) {
   int rv;
 
+  std::cout << "***on_write: " << ++counter << std::endl;
   if (ngtcp2_conn_in_closing_period(conn_)) {
     return 0;
   }
@@ -1285,6 +1288,7 @@ int Handler::on_write(bool retransmit) {
   assert(sendbuf_.left() >= max_pktlen_);
 
   if (!retransmit) {
+    std::cout << "***on_write: 2:" << counter << std::endl;
     for (auto &p : streams_) {
       auto &stream = p.second;
       rv = on_write_stream(*stream);
@@ -1316,7 +1320,8 @@ int Handler::on_write(bool retransmit) {
     }
 
     sendbuf_.push(n);
-
+    
+    std::cout << "***on_write->sendbuf_->size: " << sendbuf_.size() << std::endl;
     auto rv = server_->send_packet(remote_addr_, sendbuf_);
     if (rv == NETWORK_ERR_SEND_NON_FATAL) {
       break;
